@@ -6,7 +6,7 @@ extern void Configurar_UART3(void)
     SYSCTL->RCGCGPIO |= (1<<2);     //Paso 2 (RCGCGPIO) pag.340 Enable clock port A
     //(GPIOAFSEL) pag.671 Enable alternate function
     GPIOC->AFSEL = (1<<6) | (1<<7);
-    //GPIO Port Control (GPIOPCTL) PA0-> U0Rx PA1-> U0Tx pag.688
+    //GPIO Port Control (GPIOPCTL) PC6-> U3Rx PC7-> U3Tx pag.688
     GPIOC->PCTL = (GPIOC->PCTL&0x11FFFFFF) | 0x11000000;// (1<<0) | (1<<4);//0x00000011
     // GPIO Digital Enable (GPIODEN) pag.682
     GPIOC->DEN = (1<<6) | (1<<7);//PA1 PA0
@@ -15,10 +15,10 @@ extern void Configurar_UART3(void)
 
     // UART Integer Baud-Rate Divisor (UARTIBRD) pag.914
     /*
-    BRD = 33,000,000 / (16*19200) = 107.421875
-    UARTFBRD[DIVFRAC] = integer(.421875 * 64 + 0.5) = 27.5 
+    BRD = 80,000,000 / (16 * 19200) = 260.4166667
+    UARTFBRD[DIVFRAC] = integer(0.4166667 * 64 + 0.5) = 27
     */
-    UART3->IBRD = 107;
+    UART3->IBRD = 260;
     // UART Fractional Baud-Rate Divisor (UARTFBRD) pag.915
     UART3->FBRD = 27;
     //  UART Line Control (UARTLCRH) pag.916
@@ -27,9 +27,6 @@ extern void Configurar_UART3(void)
     UART3->CC =(0<<0);
     //Disable UART0 UART Control (UARTCTL) pag.918
     UART3->CTL = (1<<0) | (1<<8) | (1<<9);
-
-
-
 }
 
 
@@ -51,43 +48,70 @@ extern void printChar(char c)
 }
 extern void printString(char* string)
 {
-    while(*string)
+    int i=0;
+    while( string[i]>47) //Nota. Se inicia a partir de 48 se inicia los números en ASCII
     {
-        printChar(*(string++));
+        printChar(string[i]);
+        i++;
     }
 }
 
-extern char * readString(char delimitador)
+extern int readString(char delimitador, char *string) //tamaño del palabra
 {
 
    int i=0;
-   char *string = (char *)calloc(10,sizeof(char));
    char c = readChar();
    while(c != delimitador)
    {
-       *(string+i) = c;
+       string[i] = c;
        i++;
-       if(i%10==0)
-       {
-           string = realloc(string,(i+10)*sizeof(char));
-       }
        c = readChar();
    }
 
-   return string;
-
+   return i;
 }
 
-/*extern char *invertir(char *string, int *length){
-    static char NombreInvertido[20];
-    int cont = 0;
-    int aux = 0; 
-    for (int i = length; i > 0; i--){
-        NombreInvertido[cont] = *(string + (i -1));
-        NombreInvertido[cont + 1] = aux + '0';
-        aux ++; 
-        cont = cont + 2;
-    }
-    NombreInvertido[cont - 1] = '\n'; 
-    return &NombreInvertido[0];
-}*/
+extern void Invertir(char *Nombre, int tam) //invertir y números
+{
+int i = 1;
+int a=1;
+int b=0;
+int flag = 0;
+int Size;
+Size=tam;
+   
+if (tam < 10) //se calcula el tamaño necesario paraa guardar el nombre con números
+        tam = tam + (tam-1);// se delimita el espacio para nombres pequeños 
+    else
+    {
+        tam = 18 + ((tam - 9)*3);// se delimita el espacio para nombres grandes
+    }    
+        char invert[tam];
+    
+while(i<tam) 
+{
+if (flag == 0 )//coloca las letras al reves 
+{
+	invert[b]=Nombre[Size-i];
+	i=i+1;
+	b=b+1;
+    flag=1;
+
+}
+else//colocar numeros 
+{
+	flag=0;
+	invert[b]=a+'0';
+	a=a+1;
+	b=b+1;
+}
+
+}
+  for(int j=0; j<=(tam-1); j++) //se reasigna el valor del arreglo para llamarlo a la funcion
+{
+    Nombre[j]=invert[j];
+} 
+  for(int n=tam ;n <= 100;n++) //se rellenan las casillas vacias del arreglo inicial 
+    Nombre[n] = 0;
+  return;
+} 
